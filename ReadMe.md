@@ -3,7 +3,7 @@ Overview
 
 Project will create (in docker)
 
-* A single MarkLogic node
+* A single MarkLogic node with a dhf v4.0.1 application ready for use (Thanks to Dermot Smyth for the docker setup)
 
 Admin account is
 * Username: admin
