@@ -1,0 +1,76 @@
+import com.marklogic.client.DatabaseClientFactory
+import com.marklogic.client.ext.helper.ClientHelper
+import com.marklogic.client.ext.modulesloader.ssl.SimpleX509TrustManager
+
+import javax.net.ssl.SSLContext
+import javax.net.ssl.TrustManager;
+
+plugins {
+    id 'java'
+    // This plugin allows you to create different environments
+    // for your gradle deploy. Each environment is represented
+    // by a gradle-${env}.properties file
+    // See https://github.com/stevesaliman/gradle-properties-plugin
+    // specify the env on the command line with:
+    // gradle -PenvironmentName=x ...
+    id 'net.saliman.properties' version '1.4.6'
+
+    // This gradle plugin extends the ml-gradle plugin with
+    // commands that make the Data Hub Framework do its magic
+    id 'com.marklogic.ml-data-hub' version '4.0.1'
+    id 'com.avast.gradle.docker-compose' version "0.6.11"
+}
+
+ext {
+    // Bugfix for DHF4
+    def loadModulesCommand = mlAppDeployer.getCommand("LoadModulesCommand")
+    mlAppDeployer.getCommand("LoadHubModulesCommand").setExecuteSortOrder(loadModulesCommand.getExecuteSortOrder() - 1)
+    // end Bugfix for DHF4
+    SSLContext sslContext = SSLContext.getInstance("TLSv1.2");
+    sslContext.init(null, (TrustManager[]) [new com.marklogic.client.ext.modulesloader.ssl.SimpleX509TrustManager()], null);
+    mlAppConfig {
+        def command = new com.marklogic.appdeployer.command.security.GenerateTemporaryCertificateCommand()
+        command.setTemplateIdOrName(mlSslCertTemplateName)
+        command.setCommonName("localhost")
+        command.setValidFor(365)
+        mlAppDeployer.commands.add(command)
+        setRestSslContext(sslContext)
+    }
+}
+
+// Bugfix for DHF4
+task deleteModuleTimestampsFile(type: Delete) {
+  description = "Use this as mlDeleteModuleTimestampsFile doesn't seem to work with DHF4"
+  delete "build/ml-javaclient-util/module-timestamps.properties"
+}
+mlReloadModules.dependsOn deleteModuleTimestampsFile
+mlDeploy.dependsOn deleteModuleTimestampsFile
+// end Bugfix for DHF4
+
+dockerCompose {
+    waitForTcpPorts = false
+}
+
+task mlDockerSetupNode(dependsOn:composeUp)  {
+  doLast {
+    sleep(5 * 1000) //ensure node is up
+    exec {
+      commandLine 'docker', 'exec', 'ml-node.local', 'init-marklogic' 
+    }
+  }
+}
+
+mlDeploy.shouldRunAfter mlDockerSetupNode
+
+task mlDockerDeploy(dependsOn:[mlDockerSetupNode,mlDeploy])
+
+task mlDockerStart(dependsOn:composeUp)
+
+task mlDockerStop(type:Exec) {
+  commandLine "docker-compose", "stop"
+}
+
+task mlDockerTeardown(type: Delete, dependsOn:composeDown) {
+  //remove logs directory
+  delete 'logs'
+}
