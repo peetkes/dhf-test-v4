@@ -60,9 +60,7 @@ task mlDockerSetupNode(dependsOn:composeUp)  {
   }
 }
 
-mlDeploy.shouldRunAfter mlDockerSetupNode
-
-task mlDockerDeploy(dependsOn:[mlDockerSetupNode,mlDeploy])
+task mlDockerDeploy(dependsOn:[mlDockerSetupNode])
 
 task mlDockerStart(dependsOn:composeUp)
 

@@ -17,6 +17,8 @@ Prerequisites
 3. Following ports available -
 * 8000-8050
 
+Make sure you have created a security template with the name marklogic.local and use that for enabling ssl on ports 8000, 8001 and 8002 before you run a deployment on the machine.
+
 
 Installation steps (once off)
 -----------------------------
@@ -31,10 +33,15 @@ Installation steps (once off)
     ./gradlew build 
 ```
 
-
 Server Setup
 -------------
 1. ./gradlew mlDockerDeploy
+1. create certificate template with name 'marklogic.local'
+1. Enable SSL on ports 8000-8002 with above certificate name
+
+Deploy Application
+-------------
+1. ./gradlew mlDeploy
 
 Server Start
 -------------
